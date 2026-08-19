@@ -78,5 +78,23 @@ def create_message(
     return new_message
 
 
-def get_messages() -> list[dict]:
-    return messages.copy()
+def get_messages(
+    username: str,
+    with_user: str | None = None,
+) -> list[dict]:
+    if with_user is not None:
+        if get_user_by_username(with_user) is None:
+            raise UserNotFoundError(with_user)
+
+        return [
+            message
+            for message in messages
+            if (message["sender"] == username and message["receiver"] == with_user)
+            or (message["sender"] == with_user and message["receiver"] == username)
+        ]
+
+    return [
+        message
+        for message in messages
+        if (message["sender"] == username or message["receiver"] == username)
+    ]
