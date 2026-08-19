@@ -2,16 +2,16 @@ import logging
 
 from fastapi import APIRouter, HTTPException, status
 
+from src.exceptions import UserAlreadyExistsError
 from src.models import UserCreate, UserResponse
 from src.services import create_user
-
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"],
 )
 
-logger = logging.getLogger("uvicorn.error")
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -23,12 +23,20 @@ def add_user(user: UserCreate):
     try:
         new_user = create_user(user)
 
-        logger.info("User created: %s", user.username)
+        logger.info(
+            "User created: %s",
+            user.username,
+        )
 
         return new_user
 
-    except ValueError as error:
+    except UserAlreadyExistsError as error:
+        logger.warning(
+            "User registration failed: %s",
+            error,
+        )
+
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             detail=str(error),
         ) from error

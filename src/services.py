@@ -1,12 +1,18 @@
+from src.exceptions import (
+    CannotMessageSelfError,
+    UserAlreadyExistsError,
+    UserNotFoundError,
+)
 from src.models import MessageCreate, UserCreate
 
 users: list[dict] = []
 messages: list[dict] = []
 
+
 def create_user(user: UserCreate) -> dict:
     for existing_user in users:
         if existing_user["username"] == user.username:
-            raise ValueError("Username already exists")
+            raise UserAlreadyExistsError(user.username)
 
     new_user = {
         "id": len(users) + 1,
@@ -22,10 +28,13 @@ def create_message(message: MessageCreate) -> dict:
     usernames = {user["username"] for user in users}
 
     if message.sender not in usernames:
-        raise ValueError("Sender does not exist")
+        raise UserNotFoundError(message.sender)
 
     if message.receiver not in usernames:
-        raise ValueError("Receiver does not exist")
+        raise UserNotFoundError(message.receiver)
+
+    if message.sender == message.receiver:
+        raise CannotMessageSelfError()
 
     new_message = {
         "id": len(messages) + 1,
