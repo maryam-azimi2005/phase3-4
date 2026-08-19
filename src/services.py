@@ -1,3 +1,5 @@
+import threading
+
 from src.exceptions import (
     CannotMessageSelfError,
     UserAlreadyExistsError,
@@ -9,13 +11,17 @@ from src.security import hash_password, verify_password
 users: list[dict] = []
 messages: list[dict] = []
 
+_users_lock = threading.RLock()
+_messages_lock = threading.RLock()
+
 
 def get_user_by_username(
     username: str,
 ) -> dict | None:
-    for user in users:
-        if user["username"] == username:
-            return user
+    with _users_lock:
+        for user in users:
+            if user["username"] == username:
+                return user.copy()
 
     return None
 
@@ -38,19 +44,25 @@ def authenticate_user(
     return user
 
 
-def create_user(user: UserCreate) -> dict:
-    if get_user_by_username(user.username) is not None:
-        raise UserAlreadyExistsError(user.username)
+def create_user(
+    user: UserCreate,
+) -> dict:
+    hashed_password = hash_password(user.password)
 
-    new_user = {
-        "id": len(users) + 1,
-        "username": user.username,
-        "hashed_password": hash_password(user.password),
-    }
+    with _users_lock:
+        for existing_user in users:
+            if existing_user["username"] == user.username:
+                raise UserAlreadyExistsError(user.username)
 
-    users.append(new_user)
+        new_user = {
+            "id": len(users) + 1,
+            "username": user.username,
+            "hashed_password": hashed_password,
+        }
 
-    return new_user
+        users.append(new_user)
+
+        return new_user.copy()
 
 
 def create_message(
@@ -66,35 +78,45 @@ def create_message(
     if sender == message.receiver:
         raise CannotMessageSelfError()
 
-    new_message = {
-        "id": len(messages) + 1,
-        "sender": sender,
-        "receiver": message.receiver,
-        "content": message.content,
-    }
+    with _messages_lock:
+        new_message = {
+            "id": len(messages) + 1,
+            "sender": sender,
+            "receiver": message.receiver,
+            "content": message.content,
+        }
 
-    messages.append(new_message)
+        messages.append(new_message)
 
-    return new_message
+        return new_message.copy()
 
 
 def get_messages(
     username: str,
     with_user: str | None = None,
 ) -> list[dict]:
-    if with_user is not None:
-        if get_user_by_username(with_user) is None:
-            raise UserNotFoundError(with_user)
+    if get_user_by_username(username) is None:
+        raise UserNotFoundError(username)
 
-        return [
-            message
-            for message in messages
-            if (message["sender"] == username and message["receiver"] == with_user)
-            or (message["sender"] == with_user and message["receiver"] == username)
-        ]
+    if with_user is not None and get_user_by_username(with_user) is None:
+        raise UserNotFoundError(with_user)
 
-    return [
-        message
-        for message in messages
-        if (message["sender"] == username or message["receiver"] == username)
-    ]
+    with _messages_lock:
+        if with_user is None:
+            result = [
+                message
+                for message in messages
+                if (message["sender"] == username or message["receiver"] == username)
+            ]
+
+        else:
+            result = [
+                message
+                for message in messages
+                if (
+                    (message["sender"] == username and message["receiver"] == with_user)
+                    or (message["sender"] == with_user and message["receiver"] == username)
+                )
+            ]
+
+        return [message.copy() for message in result]
