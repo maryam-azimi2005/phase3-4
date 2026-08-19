@@ -4,19 +4,30 @@ from src.exceptions import (
     UserNotFoundError,
 )
 from src.models import MessageCreate, UserCreate
+from src.security import hash_password
 
 users: list[dict] = []
 messages: list[dict] = []
 
 
+def get_user_by_username(
+    username: str,
+) -> dict | None:
+    for user in users:
+        if user["username"] == username:
+            return user
+
+    return None
+
+
 def create_user(user: UserCreate) -> dict:
-    for existing_user in users:
-        if existing_user["username"] == user.username:
-            raise UserAlreadyExistsError(user.username)
+    if get_user_by_username(user.username) is not None:
+        raise UserAlreadyExistsError(user.username)
 
     new_user = {
         "id": len(users) + 1,
         "username": user.username,
+        "hashed_password": hash_password(user.password),
     }
 
     users.append(new_user)
