@@ -4,7 +4,7 @@ from src.exceptions import (
     UserNotFoundError,
 )
 from src.models import MessageCreate, UserCreate
-from src.security import hash_password
+from src.security import hash_password, verify_password
 
 users: list[dict] = []
 messages: list[dict] = []
@@ -18,6 +18,24 @@ def get_user_by_username(
             return user
 
     return None
+
+
+def authenticate_user(
+    username: str,
+    password: str,
+) -> dict | None:
+    user = get_user_by_username(username)
+
+    if user is None:
+        return None
+
+    if not verify_password(
+        password,
+        user["hashed_password"],
+    ):
+        return None
+
+    return user
 
 
 def create_user(user: UserCreate) -> dict:

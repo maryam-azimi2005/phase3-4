@@ -92,3 +92,8 @@ class MessageResponse(BaseModel):
     sender: str
     receiver: str
     content: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
