@@ -53,21 +53,24 @@ def create_user(user: UserCreate) -> dict:
     return new_user
 
 
-def create_message(message: MessageCreate) -> dict:
-    usernames = {user["username"] for user in users}
+def create_message(
+    sender: str,
+    message: MessageCreate,
+) -> dict:
+    if get_user_by_username(sender) is None:
+        raise UserNotFoundError(sender)
 
-    if message.sender not in usernames:
-        raise UserNotFoundError(message.sender)
-
-    if message.receiver not in usernames:
+    if get_user_by_username(message.receiver) is None:
         raise UserNotFoundError(message.receiver)
 
-    if message.sender == message.receiver:
+    if sender == message.receiver:
         raise CannotMessageSelfError()
 
     new_message = {
         "id": len(messages) + 1,
-        **message.model_dump(),
+        "sender": sender,
+        "receiver": message.receiver,
+        "content": message.content,
     }
 
     messages.append(new_message)

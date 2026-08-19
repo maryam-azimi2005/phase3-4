@@ -44,10 +44,6 @@ class UserResponse(BaseModel):
 
 
 class MessageCreate(BaseModel):
-    sender: str = Field(
-        min_length=3,
-        max_length=32,
-    )
     receiver: str = Field(
         min_length=3,
         max_length=32,
@@ -58,12 +54,11 @@ class MessageCreate(BaseModel):
     )
 
     @field_validator(
-        "sender",
         "receiver",
         mode="before",
     )
     @classmethod
-    def validate_usernames(
+    def validate_receiver(
         cls,
         value: str,
     ) -> str:
