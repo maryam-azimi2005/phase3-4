@@ -3,7 +3,9 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
+from sqlalchemy.orm import Session
 
+from src.database import get_db
 from src.security import decode_access_token
 from src.services import get_user_by_username
 
@@ -16,6 +18,10 @@ def get_current_user(
     token: Annotated[
         str,
         Depends(oauth2_scheme),
+    ],
+    db: Annotated[
+        Session,
+        Depends(get_db),
     ],
 ) -> dict:
     credentials_exception = HTTPException(
@@ -36,7 +42,7 @@ def get_current_user(
     except InvalidTokenError as error:
         raise credentials_exception from error
 
-    user = get_user_by_username(username)
+    user = get_user_by_username(db, username)
 
     if user is None:
         raise credentials_exception

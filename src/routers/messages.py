@@ -2,7 +2,9 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
 
+from src.database import get_db
 from src.dependencies import get_current_user
 from src.exceptions import CannotMessageSelfError, UserNotFoundError
 from src.models import MessageCreate, MessageResponse
@@ -27,9 +29,14 @@ def send_message(
         dict,
         Depends(get_current_user),
     ],
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
 ):
     try:
         new_message = create_message(
+            db=db,
             sender=current_user["username"],
             message=message,
         )
@@ -74,6 +81,10 @@ def list_messages(
         dict,
         Depends(get_current_user),
     ],
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
     with_user: Annotated[
         str | None,
         Query(
@@ -84,6 +95,7 @@ def list_messages(
 ):
     try:
         return get_messages(
+            db=db,
             username=current_user["username"],
             with_user=with_user,
         )

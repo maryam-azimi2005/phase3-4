@@ -3,7 +3,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
 
+from src.database import get_db
 from src.dependencies import get_current_user
 from src.models import TokenResponse, UserResponse
 from src.security import create_access_token
@@ -26,8 +28,13 @@ def login(
         OAuth2PasswordRequestForm,
         Depends(),
     ],
+    db: Annotated[
+        Session,
+        Depends(get_db),
+    ],
 ):
     user = authenticate_user(
+        db,
         form_data.username,
         form_data.password,
     )
