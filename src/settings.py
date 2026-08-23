@@ -1,11 +1,10 @@
 import json
 import logging
 import logging.handlers
-import os
 from enum import StrEnum
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 30
@@ -16,8 +15,18 @@ class Environment(StrEnum):
     PRODUCTION = "production"
 
 
-class LoggingSettings(BaseModel):
-    environment: Environment = Environment.PRODUCTION
+class Settings(BaseSettings):
+    messenger_jwt_secret: str
+    messenger_env: Environment = Environment.DEVELOPMENT
+    database_url: str
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore",
+    )
+
+
+settings = Settings()
 
 
 class JsonFormatter(logging.Formatter):
@@ -38,35 +47,10 @@ class JsonFormatter(logging.Formatter):
         )
 
 
-def get_jwt_secret_key() -> str:
-    secret_key = os.environ.get("MESSENGER_JWT_SECRET")
-
-    if not secret_key:
-        raise RuntimeError(
-            "MESSENGER_JWT_SECRET is not set. Set it before starting the application."
-        )
-
-    return secret_key
-
-
 def setup_logging(
     log_filename: str = "messenger-api.log",
 ) -> None:
-    raw_value = os.environ.get(
-        "MESSENGER_ENV",
-        "development",
-    )
-
-    allowed_values = [item.value for item in Environment]
-
-    if raw_value not in allowed_values:
-        raise RuntimeError(
-            f"Invalid MESSENGER_ENV='{raw_value}'. Allowed values: {', '.join(allowed_values)}"
-        )
-
-    settings = LoggingSettings(environment=raw_value)
-
-    console_enabled = settings.environment == Environment.DEVELOPMENT
+    console_enabled = settings.messenger_env == Environment.DEVELOPMENT
 
     log_dir = Path("logs")
 
@@ -114,6 +98,6 @@ def setup_logging(
 
     logger.info(
         "Logging configured (environment=%s, console_enabled=%s)",
-        settings.environment.value,
+        settings.messenger_env.value,
         console_enabled,
     )

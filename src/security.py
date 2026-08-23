@@ -9,7 +9,7 @@ from pwdlib import PasswordHash
 from src.settings import (
     JWT_ALGORITHM,
     JWT_EXPIRE_MINUTES,
-    get_jwt_secret_key,
+    settings,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ def create_access_token(
 
     token = jwt.encode(
         payload,
-        get_jwt_secret_key(),
+        settings.messenger_jwt_secret,
         algorithm=JWT_ALGORITHM,
     )
 
@@ -66,7 +66,7 @@ def decode_access_token(
 ) -> dict[str, Any]:
     payload = jwt.decode(
         token,
-        get_jwt_secret_key(),
+        settings.messenger_jwt_secret,
         algorithms=[JWT_ALGORITHM],
         options={
             "require": [
